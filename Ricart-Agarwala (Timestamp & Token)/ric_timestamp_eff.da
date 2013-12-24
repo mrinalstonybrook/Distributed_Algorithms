@@ -1,0 +1,71 @@
+from time import sleep
+class Ptimestamp(DistProcess):   #class for timestamp in clear way
+   def setup(s,reqQueue,process_id,no_req):
+          d = []
+          reqId = 0
+          reqc = -1
+          inCS = 0
+          isReq = 0
+          rec_reply = {}
+          rep_counter = 0
+          
+   def cs(task,flag):
+       
+      # to enter cs, enqueue and send request to all
+      --request
+      if(flag == 0):
+        return 1
+      rec_reply = {}
+      rep_counter = 0
+      isReq = 1
+      reqId = reqQueue.pop()
+      output("Process no: " + str(process_id) + " request cs for Request no: " + str(reqId))
+      incr_logical_clock()
+      reqc = logical_clock()
+      
+      send(Request(reqc), s)
+      await(rep_counter >= len(s))
+      #output("counter cond passed" + str(rep_counter))
+      isReq = 0
+      
+      # critical section
+      inCS = 1
+      task()
+      work()
+
+      # to exit cs, dequeue and send release to all
+      --release
+      output("Process no: " + str(process_id) + " release cs for Request No: " + str(reqId))
+      for p2 in s:
+        if(p2 in d):
+          send(Reply(logical_clock(), self), p2)
+          no_req -= 1
+          d.remove(p2)
+      #output("Process no: " + str(process_id) + " release cs for Request No: " + str(reqId))
+      inCS = 0
+      
+   def main():
+      def anounce():
+         output("Process no: " + str(process_id) + " in cs for Request No: " + str(reqId))
+      k = len(reqQueue)
+      for i in range(k):
+           cs(anounce,1)
+      while (no_req > 0):
+           cs(anounce,0)
+      #output("done with main")
+
+   # when receiving request from others, enque and reply
+   def OnRequest(req):
+      if( (isReq != 1  and inCS != 1) or (req,_source) < (reqc,self) ):
+       send(Reply(logical_clock(), self), _source)
+       no_req -= 1
+      else:
+       d.append(_source)
+       
+   def OnReply(time,reqs):
+       if (reqs in s):
+           if(time > reqc):
+               if(reqs not in rec_reply):
+                   rec_reply[reqs] = 1
+                   rep_counter += 1
+                   #output("counter increment" + str(rep_counter))

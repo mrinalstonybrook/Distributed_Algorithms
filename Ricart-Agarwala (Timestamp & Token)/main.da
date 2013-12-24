@@ -1,0 +1,131 @@
+#Driver program for running all the four algorithms
+import sys
+import random
+import time
+#this is the main method which works as driver program
+def main():
+   reqMap = {}
+   if len(sys.argv) > 1:
+       nprocs = int(sys.argv[1])  #argument for number of process
+   else:
+       nprocs = 5
+
+   if len(sys.argv) > 2:
+       nrequests = int(sys.argv[2]) #argument for number of requests
+   else:
+       nrequests = 10
+
+   if len(sys.argv) > 3:
+        times = int(sys.argv[3]) # argument for number of times for which we run the request and process set
+   else:
+        times = 2
+   
+   if len(sys.argv) > 4:
+        steps = int(sys.argv[4])  #argument for the increment factor of the number of process
+   else:
+        steps = 2 
+
+   time_analysis = {}
+########################  RICART TIMESTAMP CLEAR #########################
+   time_analysis[1] = []
+   for i in range(times+1):
+       start_time = time.time()
+       print("\n STARTING RICART TIMESTAMP \n")
+       _, mod = dist_source('.','ric_timestamp.da')
+       use_channel("tcp")  
+       ps = createprocs(mod.Ptimestamp, nprocs)
+       p_id = 1  
+       reqMap = createReqProc(nprocs,nrequests + i*steps)
+       for p in ps:       
+          setupprocs({p}, [ps-{p},reqMap[p_id],p_id,nrequests + i*steps-len(reqMap[p_id]) ]) #passing the set of arguments for process creation
+          p_id += 1
+
+       startprocs(ps)
+       for p in ps: p.join()
+       i = i + 1
+       time_analysis[1].append(time.time()-start_time)
+   print("\n FINISHED RICART TIMESTAMP \n")
+ ########################  RICART TIMESTAMP EFFICIENT #########################
+   time_analysis[2] = []
+   for i in range(times+1):
+       start_time = time.time()
+       print("\n STARTING RICART TIMESTAMP EFFICIENT\n")
+       _, mod = dist_source('.','ric_timestamp_eff.da')
+       ps = createprocs(mod.Ptimestamp, nprocs)
+       #use_channel("tcp")
+       reqMap = createReqProc(nprocs,nrequests + i*steps)
+       p_id = 1  
+       for p in ps:       
+          setupprocs({p}, [ps-{p},reqMap[p_id],p_id,nrequests + i*steps-len(reqMap[p_id]) ]) #passing the set of arguments for process creation
+          p_id += 1
+
+       startprocs(ps)
+       for p in ps: p.join()
+       i = i + 1  
+       time_analysis[2].append(time.time()-start_time)         
+   print("\n FINISHED RICART TIMESTAMP EFFICIENT \n")
+######################## RICHART TOKEN #####################################
+   time_analysis[3] = []
+   for i in range(times+1):
+       start_time = time.time()
+       print("\n STARTING RICART TOKEN \n")        
+       _, mod = dist_source('.','ric_token.da') 
+       ps = createprocs(mod.Ptoken, nprocs)
+       #use_channel("tcp")
+       reqMap = createReqProc(nprocs,nrequests + i*steps)
+       p_id = 1  
+       for p in ps:       
+          setupprocs({p}, [ps-{p},reqMap[p_id],p_id])   #passing the set of arguments for process creation
+          p_id += 1
+       
+       startprocs(ps)
+       for p in ps: p.join()
+       i = i + 1
+       time_analysis[3].append(time.time()-start_time)
+   print("\n FINISHED RICART TOKEN \n")
+######################## RICHART TOKEN EFFICIENT#####################################
+   time_analysis[4] = []
+   for i in range(times+1):
+       start_time = time.time()
+       print("\n STARTING RICART TOKEN EFFICIENT\n")      
+       _, mod = dist_source('.','ric_token_eff.da') 
+       ps = createprocs(mod.Ptoken, nprocs)
+       #use_channel("tcp")
+       reqMap = createReqProc(nprocs,nrequests + i*steps) #passing the set of arguments for process creation
+       p_id = 1  
+       for p in ps:       
+          setupprocs({p}, [ps-{p},reqMap[p_id],p_id])
+          p_id += 1       
+       startprocs(ps)
+       for p in ps: p.join()
+       i = i + 1 
+       time_analysis[4].append(time.time()-start_time)    
+   print("\n FINISHED RICART TOKEN EFFICIENT \n")
+   
+   algo_name = []
+   algo_name.append("Ricart Timestamp-Clear")
+   algo_name.append("Ricart Timestamp-Efficient")
+   algo_name.append("Ricart Token-Clear")
+   algo_name.append("Ricart Token-Efficient")
+   
+   for i in range(1,5):
+     print("\n\nTime analysis for " + algo_name[i-1])
+     [print("Runtime for pass " + str(k) + ": "+ str(time_analysis[i][k]) + " seconds" )  for k in range(times+1)]
+   print("\n\n Algorithm Name                                           Average Time")
+   for i in range(1,5):
+     print(algo_name[i-1] + "                       " + str(sum(time_analysis[i])/len(time_analysis[i])) + " seconds")
+     
+
+# method for creation of map when number of requests and procs are passed as input    
+def createReqProc(np,nr):
+   reqlist=[]
+   reqMap1 = dict((proc, []) for proc in range(1, np + 1))
+   reqList = list(range(1, nr + 1))
+
+   random.shuffle(reqList)
+   for request in range(len(reqList)):
+       requestId = reqList.pop()
+       reqMap1[(request % np) + 1].append(requestId)
+
+   return reqMap1
+

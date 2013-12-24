@@ -1,0 +1,100 @@
+from time import sleep
+class Ptoken(DistProcess):
+       
+   def setup(s,reqQueue,process_id):
+      reqc = 0
+      reqId = 0
+      request = {}
+      token = {}
+      token_present = False
+      token_held = False
+      processList = list(s)
+      processList.append(self)
+      processList.sort()
+      RingSchedule(processList)
+
+      if(process_id == 1):
+          token_present = True
+       
+   def RingSchedule(processList):
+      self_index = processList.index(self)
+      processList = processList[self_index + 1:] + processList[:self_index]
+
+   def cs(task):
+       
+      # to enter cs, enqueue and send request to all
+      --request
+      reqId = reqQueue.pop()
+      output("Process no: " + str(process_id) + " request cs for Request no: " + str(reqId))
+      incr_logical_clock()
+      reqc = logical_clock()
+      
+      if(not token_present):
+         #output("token is not present")
+         request[self] = reqc
+         send(Request(reqc), s)
+         await(received(Token(c2)))
+         token_present = True
+      token_held = True
+      
+      # critical section
+      task()
+      work()
+      # to exit cs, dequeue and send release to all
+      --release
+      sleep(0.2)
+      token[self] = logical_clock()
+      token_held = False
+      output("Process no: " + str(process_id) + " release cs for Request No: " + str(reqId))
+      for p1 in processList:
+        if(p1 in request):
+            req_time = request[p1]
+        else:
+            req_time = -1
+            
+        if(p1 in token):
+            token_time = token[p1]
+        else:
+            token_time = -1
+        #output(str(req_time) + str(token_time) + str(p1))
+
+        if(req_time > token_time and token_present):
+            token_present = False
+            #output("token is sent")
+            send(Token(logical_clock()), p1)
+            
+      #output("came here" + str(process_id))
+
+      
+   def main():
+      def anounce():
+         output("Process no: " + str(process_id) + " in cs for Request No: " + str(reqId))
+      k = len(reqQueue)
+      for i in range(k):
+           cs(anounce)
+      #output("done with main")
+
+   # when receiving request from others, enque and reply
+   def OnRequest(req):
+       if( _source in request):
+           request[_source] = max(request[_source],req)
+       else:
+           request[_source] = req
+           
+       if (token_present and not token_held):
+          for p1 in processList:
+            if(p1 in request):
+                req_time = request[p1]
+            else:
+                req_time = -1
+                
+            if(p1 in token):
+                token_time = token[p1]
+            else:
+                token_time = -1
+
+            if(req_time > token_time and token_present):
+                token_present = False
+                incr_logical_clock()
+                send(Token(logical_clock()), p1)
+  

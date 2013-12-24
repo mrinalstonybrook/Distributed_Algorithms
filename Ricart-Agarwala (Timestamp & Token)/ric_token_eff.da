@@ -1,0 +1,78 @@
+from time import sleep
+class Ptoken(DistProcess):
+       
+   def setup(s,reqQueue,process_id):
+      reqc = 0
+      reqId = 0
+      request = {}
+      token = {}
+      token_present = False
+      token_held = False
+      processList = list(s)
+      processList.append(self)
+      processList.sort()
+      RingSchedule(processList)
+
+      if(process_id == 1):
+          token_present = True
+       
+   def RingSchedule(processList):
+      self_index = processList.index(self)
+      processList = processList[self_index + 1:] + processList[:self_index]
+
+   def cs(task,req):
+       
+      # to enter cs, enqueue and send request to all
+      --request
+      reqId = req
+      output("Process no: " + str(process_id) + " request cs for Request no: " + str(reqId))
+      incr_logical_clock()
+      reqc = logical_clock()
+      
+      if(not token_present):
+
+         request[self] = reqc
+         send(Request(reqc), s)
+         await(received(Token(c2)))
+         token_present = True
+      token_held = True
+      
+      # critical section
+      task()
+      work()
+
+      # to exit cs, dequeue and send release to all
+      --release
+      #token[self] = logical_clock()
+      token_held = False
+      output("Process no: " + str(process_id) + " release cs for Request No: " + str(reqId))
+      for p1 in processList:
+        req_time = [request[p1] if p1 in request else -1]
+        token_time = [token[p1] if p1 in token else -1]
+
+        if(req_time > token_time and token_present):
+            token_present = False
+            #output("token is sent")
+            send(Token(logical_clock()), p1)
+            
+      #output("came here" + str(process_id))
+
+      
+   def main():
+      def anounce():
+         output("Process no: " + str(process_id) + " in cs for Request No: " + str(reqId))
+      [cs(anounce,req) for req in reqQueue]
+
+   # when receiving request from others, enque and reply
+   def OnRequest(req):
+       request[_source] = max(request[_source],req) if( _source in request) else req           
+       if (token_present and not token_held):
+          for p1 in processList:
+            req_time = [request[p1] if p1 in request else -1]
+            token_time = [token[p1] if p1 in token else -1]
+
+            if(req_time > token_time and token_present):
+                token_present = False
+                output("token is sent")
+                send(Token(logical_clock()), p1)
+  
